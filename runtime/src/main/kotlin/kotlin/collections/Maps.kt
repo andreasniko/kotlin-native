@@ -6,7 +6,7 @@
 package kotlin.collections
 
 // creates a singleton copy of map, if there is specialization available in target platform, otherwise returns itself
-internal inline actual fun <K, V> Map<K, V>.toSingletonMapOrSelf(): Map<K, V> = toSingletonMap()
+internal actual fun <K, V> Map<K, V>.toSingletonMapOrSelf(): Map<K, V> = toSingletonMap()
 
 // creates a singleton copy of map
 internal actual fun <K, V> Map<out K, V>.toSingletonMap(): Map<K, V>
