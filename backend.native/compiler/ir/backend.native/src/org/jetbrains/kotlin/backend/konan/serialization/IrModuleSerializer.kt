@@ -38,6 +38,7 @@ import org.jetbrains.kotlin.ir.expressions.impl.IrUnaryPrimitiveImpl
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrStarProjectionImpl
+import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.metadata.KonanIr
 import org.jetbrains.kotlin.types.SimpleType
 import org.jetbrains.kotlin.types.StarProjectionImpl
@@ -126,7 +127,7 @@ internal class IrModuleSerializer(
         is IrReturnableBlockSymbol ->
             KonanIr.IrSymbolKind.RETURNABLE_BLOCK_SYMBOL
         is IrFieldSymbol ->
-            if (symbol.owner.correspondingProperty == null)
+            if (symbol.owner.correspondingProperty.let { it == null || it.isDelegated })
                 KonanIr.IrSymbolKind.STANDALONE_FIELD_SYMBOL
             else
                 KonanIr.IrSymbolKind.FIELD_SYMBOL

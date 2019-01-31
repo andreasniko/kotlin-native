@@ -18,6 +18,8 @@ import org.jetbrains.kotlin.cli.common.messages.AnalyzerWithCompilerReport
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.languageVersionSettings
+import org.jetbrains.kotlin.ir.declarations.IrFile
+import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.psi2ir.Psi2IrConfiguration
 import org.jetbrains.kotlin.psi2ir.Psi2IrTranslator
@@ -58,6 +60,8 @@ fun runTopLevelPhases(konanConfig: KonanConfig, environment: KotlinCoreEnvironme
 
     val bindingContext = analyzerWithCompilerReport.analysisResult.bindingContext
 
+    lateinit var irModules: List<IrModuleFragment>
+
     phaser.phase(KonanPhase.PSI_TO_IR) {
         // Translate AST to high level IR.
         val translator = Psi2IrTranslator(context.config.configuration.languageVersionSettings,
@@ -76,7 +80,7 @@ fun runTopLevelPhases(konanConfig: KonanConfig, environment: KotlinCoreEnvironme
             forwardDeclarationsModuleDescriptor
         )
 
-        val irModules = context.moduleDescriptor.allDependencyModules.map {
+        irModules = context.moduleDescriptor.allDependencyModules.map {
             val library = it.konanLibrary
             if (library == null) {
                 return@map null
@@ -102,9 +106,6 @@ fun runTopLevelPhases(konanConfig: KonanConfig, environment: KotlinCoreEnvironme
             context.irModule!!.files.forEach { irFile -> extension.generate(irFile, context, bindingContext) }
         }
     }
-    phaser.phase(KonanPhase.GEN_SYNTHETIC_FIELDS) {
-        markBackingFields(context)
-    }
 
     // TODO: We copy default value expressions from expects to actuals before IR serialization,
     // because the current infrastructure doesn't allow us to get them at deserialization stage.
@@ -125,11 +126,27 @@ fun runTopLevelPhases(konanConfig: KonanConfig, environment: KotlinCoreEnvironme
     }
     phaser.phase(KonanPhase.BACKEND) {
         phaser.phase(KonanPhase.LOWER) {
+
             KonanLower(context, phaser).lower()
+
+            val irModule = context.irModule!!
+            val files = mutableListOf<IrFile>()
+            files += irModule.files
+            irModule.files.clear()
+            for (libModule in irModules) {
+                irModule.files += libModule.files
+                KonanLower(context, phaser).lower()
+                irModule.files.clear()
+            }
+            irModule.files += files
+
 //            validateIrModule(context, context.ir.irModule) // Temporarily disabled until moving to new IR finished.
             context.ir.moduleIndexForCodegen = ModuleIndex(context.ir.irModule)
         }
         phaser.phase(KonanPhase.BITCODE) {
+            for (libModule in irModules) {
+                context.irModule!!.files += libModule.files
+            }
             emitLLVM(context, phaser)
             produceOutput(context, phaser)
         }

@@ -1003,9 +1003,13 @@ abstract class IrModuleDeserializer(
             deserializeIrField(proto.backingField, start, end, origin)
         } else null
 
-        val descriptor =
-            if (proto.hasDescriptor()) deserializeDescriptorReference(proto.descriptor) as PropertyDescriptor else null
-                ?: WrappedPropertyDescriptor()
+        backingField?.let { (it.descriptor as? WrappedFieldDescriptor)?.bind(it) }
+
+        val descriptor = when {
+            proto.hasDescriptor() -> (deserializeDescriptorReference(proto.descriptor) as PropertyDescriptor)
+            backingField != null && !proto.isDelegated -> backingField.descriptor
+            else -> WrappedPropertyDescriptor()
+        }
 
         val property = IrPropertyImpl(
             start, end, origin,
@@ -1039,19 +1043,21 @@ abstract class IrModuleDeserializer(
         property.setter =
                 if (proto.hasSetter()) deserializeIrFunction(proto.setter, start, end, origin, property) else null
 
-        property.getter?.let {
-            val descriptor = it.descriptor
-            if (descriptor is WrappedSimpleFunctionDescriptor) descriptor.bind(it)
-            symbolTable.declareSimpleFunction(UNDEFINED_OFFSET, UNDEFINED_OFFSET, irrelevantOrigin,
-                descriptor, { symbol -> it })
-
-        }
-        property.setter?.let {
-            val descriptor = it.descriptor
-            if (descriptor is WrappedSimpleFunctionDescriptor) descriptor.bind(it)
-            symbolTable.declareSimpleFunction(UNDEFINED_OFFSET, UNDEFINED_OFFSET, irrelevantOrigin,
-                descriptor, { symbol -> it })
-        }
+        property.getter?.let { (it.descriptor as? WrappedSimpleFunctionDescriptor)?.bind(it) }
+        property.setter?.let { (it.descriptor as? WrappedSimpleFunctionDescriptor)?.bind(it) }
+//        property.getter?.let {
+//            val descriptor = it.descriptor
+//            if (descriptor is WrappedSimpleFunctionDescriptor) descriptor.bind(it)
+//            symbolTable.declareSimpleFunction(UNDEFINED_OFFSET, UNDEFINED_OFFSET, irrelevantOrigin,
+//                descriptor, { symbol -> it })
+//
+//        }
+//        property.setter?.let {
+//            val descriptor = it.descriptor
+//            if (descriptor is WrappedSimpleFunctionDescriptor) descriptor.bind(it)
+//            symbolTable.declareSimpleFunction(UNDEFINED_OFFSET, UNDEFINED_OFFSET, irrelevantOrigin,
+//                descriptor, { symbol -> it })
+//        }
 
         return property
     }

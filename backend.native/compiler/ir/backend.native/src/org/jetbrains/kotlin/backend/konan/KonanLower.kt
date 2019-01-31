@@ -18,6 +18,7 @@ import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.name
 import org.jetbrains.kotlin.ir.util.checkDeclarationParents
+import org.jetbrains.kotlin.ir.util.dump
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.util.replaceUnboundSymbols
 
@@ -138,7 +139,11 @@ internal class KonanLower(val context: Context, val parentPhaser: PhaseManager) 
         }
         phaser.phase(KonanPhase.AUTOBOX) {
             // validateIrFile(context, irFile) // Temporarily disabled until moving to new IR finished.
-            Autoboxing(context).lower(irFile)
+            try {
+                Autoboxing(context).lower(irFile)
+            } catch (t: Throwable) {
+                println(irFile.dump())
+            }
         }
         phaser.phase(KonanPhase.RETURNS_INSERTION) {
             ReturnsInsertionLowering(context).lower(irFile)

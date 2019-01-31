@@ -93,7 +93,9 @@ internal class SpecialDeclarationsFactory(val context: Context) {
                     DECLARATION_ORIGIN_FIELD_FOR_OUTER_THIS,
                     descriptor,
                     outerClass.defaultType
-            )
+            ).apply {
+                parent = innerClass
+            }
         }
 
     fun getLoweredEnum(enumClass: IrClass): LoweredEnum {
@@ -277,10 +279,16 @@ internal class Context(config: KonanConfig) : KonanBackendContext(config) {
     var coroutineCount = 0
 
     fun needGlobalInit(field: IrField): Boolean {
-        if (field.descriptor.containingDeclaration !is PackageFragmentDescriptor) return false
-        // TODO: add some smartness here. Maybe if package of the field is in never accessed
-        // assume its global init can be actually omitted.
-        return true
+        try {
+            if (field.descriptor.containingDeclaration !is PackageFragmentDescriptor) return false
+            // TODO: add some smartness here. Maybe if package of the field is in never accessed
+            // assume its global init can be actually omitted.
+            return true
+        } catch (t: Throwable) {
+            println(field.dump())
+            println(field.descriptor)
+            throw t
+        }
     }
 
     // TODO: make lateinit?

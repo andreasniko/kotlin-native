@@ -99,7 +99,8 @@ class KonanIrModuleDeserializer(
                     ?: WrappedEnumEntryDescriptor()
             )
         KonanIr.IrSymbolKind.STANDALONE_FIELD_SYMBOL ->
-            IrFieldSymbolImpl(WrappedFieldDescriptor())
+            //IrFieldSymbolImpl(WrappedFieldDescriptor().also { println(it) })
+            symbolTable.referenceField(WrappedFieldDescriptor())
 
         KonanIr.IrSymbolKind.FIELD_SYMBOL ->
             symbolTable.referenceField(
