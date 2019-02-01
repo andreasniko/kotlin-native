@@ -94,7 +94,9 @@ private fun FileEntry.location(offset: Int, offsetToNumber: (Int) -> Int): Int {
     if (offset == SYNTHETIC_OFFSET || name.isEmpty() || name == NO_SOURCE_FILE) return 1
     // lldb uses 1-based unsigned integers, so 0 is "no-info".
     val result = offsetToNumber(offset) + 1
-    assert(result != 0)
+    assert(result != 0) {
+        "this.name = ${this.name} offset = $offset"
+    }
     return result
 }
 
